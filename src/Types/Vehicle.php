@@ -4,6 +4,7 @@ namespace abrain\Einsatzverwaltung\Types;
 use abrain\Einsatzverwaltung\CustomFields\Checkbox;
 use abrain\Einsatzverwaltung\CustomFields\NumberInput;
 use abrain\Einsatzverwaltung\CustomFields\PostSelector;
+use abrain\Einsatzverwaltung\CustomFields\UnitSelector;
 use abrain\Einsatzverwaltung\CustomFields\UrlInput;
 use WP_REST_Response;
 use WP_Term;
@@ -30,7 +31,7 @@ class Vehicle implements CustomTaxonomy
      *
      * @return int
      */
-    public static function compareVehicles($vehicle1, $vehicle2)
+    public static function compareVehicles(WP_Term $vehicle1, WP_Term $vehicle2): int
     {
         $order1 = get_term_meta($vehicle1->term_id, 'vehicleorder', true);
         $order2 = get_term_meta($vehicle2->term_id, 'vehicleorder', true);
@@ -54,7 +55,7 @@ class Vehicle implements CustomTaxonomy
     /**
      * @return string
      */
-    public static function getSlug()
+    public static function getSlug(): string
     {
         return 'fahrzeug';
     }
@@ -62,7 +63,7 @@ class Vehicle implements CustomTaxonomy
     /**
      * @return array
      */
-    public function getRegistrationArgs()
+    public function getRegistrationArgs(): array
     {
         return array(
             'label' => 'Fahrzeuge',
@@ -103,7 +104,7 @@ class Vehicle implements CustomTaxonomy
     /**
      * @inheritDoc
      */
-    public function getRewriteSlug()
+    public function getRewriteSlug(): string
     {
         return self::getSlug();
     }
@@ -113,6 +114,11 @@ class Vehicle implements CustomTaxonomy
      */
     public function registerCustomFields(CustomFieldsRepository $customFields)
     {
+        $customFields->add($this, new UnitSelector(
+            'vehicle_unit',
+            _x('Unit', 'taxonomy singular name', 'einsatzverwaltung'),
+            'Falls du auf dieser Seite mehrere Einheiten (Abteilungen o.ä.) unterscheidest, kannst du hier das Fahrzeug einer davon zuordnen.'
+        ));
         $customFields->add($this, new PostSelector(
             'fahrzeugpid',
             __('Page with further information', 'einsatzverwaltung'),
@@ -202,7 +208,7 @@ class Vehicle implements CustomTaxonomy
     /**
      * @return int Returns the number of terms in this taxonomy that have a parent term.
      */
-    private function getTermsWithParentCount()
+    private function getTermsWithParentCount(): int
     {
         $terms = get_terms(array('taxonomy' => self::getSlug(), 'hide_empty' => false));
         $childTerms = array_filter($terms, function (WP_Term $term) {
@@ -218,7 +224,7 @@ class Vehicle implements CustomTaxonomy
      *
      * @return array
      */
-    public function onCustomColumns($columns)
+    public function onCustomColumns(array $columns): array
     {
         // Remove the column for the external URL. We'll combine it with the vehicle page column.
         unset($columns['vehicle_exturl']);
@@ -236,7 +242,7 @@ class Vehicle implements CustomTaxonomy
      *
      * @return string
      */
-    public function onTaxonomyColumnContent($content, $columnName, $termId)
+    public function onTaxonomyColumnContent(string $content, string $columnName, int $termId): string
     {
         // We only want to change the column of the vehicle page
         if ($columnName !== 'fahrzeugpid') {

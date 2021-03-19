@@ -4,9 +4,16 @@ namespace abrain\Einsatzverwaltung;
 
 use abrain\Einsatzverwaltung\Frontend\ReportList\Renderer as ReportListRenderer;
 use abrain\Einsatzverwaltung\Model\IncidentReport;
+use abrain\Einsatzverwaltung\Types\Report;
+use abrain\Einsatzverwaltung\Types\Unit;
 use abrain\Einsatzverwaltung\Util\Formatter;
 use WP_Post;
 use WP_Query;
+use function date_i18n;
+use function get_terms;
+use function is_numeric;
+use function sprintf;
+use function wp_kses;
 
 /**
  * Generiert alle Inhalte für das Frontend, mit Ausnahme der Shortcodes und des Widgets
@@ -29,7 +36,7 @@ class Frontend
      * @param Options $options
      * @param Formatter $formatter
      */
-    public function __construct($options, $formatter)
+    public function __construct(Options $options, Formatter $formatter)
     {
         $this->formatter = $formatter;
         $this->options = $options;
@@ -80,18 +87,19 @@ class Frontend
      *
      * @return string Auflistung der Einsatzdetails
      */
-    public function getEinsatzberichtHeader($post, $mayContainLinks = true, $showArchiveLinks = true)
+    public function getEinsatzberichtHeader(WP_Post $post, bool $mayContainLinks = true, bool $showArchiveLinks = true): string
     {
-        if (get_post_type($post) == "einsatz") {
-            $report = new IncidentReport($post);
+        if (get_post_type($post) !== Report::getSlug()) {
+            return '';
+        }
 
-            $typesOfAlerting = $this->formatter->getTypesOfAlerting($report);
+        $report = new IncidentReport($post);
 
-            $duration = $report->getDuration();
-            $durationString = ($duration === false ? '' : $this->formatter->getDurationString($duration));
+        $duration = $report->getDuration();
+        $durationString = ($duration === false ? '' : $this->formatter->getDurationString($duration));
 
-            $showEinsatzartArchiveLink = $showArchiveLinks && $this->options->isShowEinsatzartArchive();
-            $art = $this->formatter->getTypeOfIncident($report, $mayContainLinks, $showEinsatzartArchiveLink);
+        $showTypeArchiveLink = $showArchiveLinks && $this->options->isShowEinsatzartArchive();
+        $art = $this->formatter->getTypeOfIncident($report, $mayContainLinks, $showTypeArchiveLink);
 
             if ($report->isFalseAlarm()) {
                 $art = (empty($art) ? 'Fehlalarm' : $art . ' (Fehlalarm)');
@@ -136,8 +144,44 @@ class Frontend
 
 
             return "<p>$emergencyHeader</p>";
+/*
+
+        $timeOfAlerting = $report->getTimeOfAlerting();
+        $dateAndTime = empty($timeOfAlerting) ? '-' : sprintf(
+            // translators: 1: Date, 2: Time.
+            __('%1$s at %2$s', 'einsatzverwaltung'),
+            date_i18n(get_option('date_format'), $timeOfAlerting->getTimestamp()),
+            date_i18n(get_option('time_format'), $timeOfAlerting->getTimestamp())
+        );
+        $headerstring = $this->getDetailString(__('Date', 'einsatzverwaltung'), $dateAndTime);
+
+        $headerstring .= $this->getDetailString('Alarmierungsart', $this->formatter->getTypesOfAlerting($report));
+        $headerstring .= $this->getDetailString(__('Duration', 'einsatzverwaltung'), $durationString);
+        $headerstring .= $this->getDetailString(__('Incident Category', 'einsatzverwaltung'), $art);
+        $headerstring .= $this->getDetailString(__('Location', 'einsatzverwaltung'), $report->getLocation());
+        $headerstring .= $this->getDetailString('Einsatzleiter', $report->getIncidentCommander());
+        $headerstring .= $this->getDetailString('Mannschaftsst&auml;rke', $report->getWorkforce());
+
+        // If at least one unit has been assigned to any report, show the vehicles grouped by unit
+        $unitCount = get_terms(['taxonomy' => Unit::getSlug(), 'fields' => 'count']);
+        if (is_numeric($unitCount) && $unitCount > 0) {
+            $headerstring .= $this->getDetailString(
+                __('Vehicles', 'einsatzverwaltung'),
+                $this->formatter->getVehiclesByUnitString($report->getVehiclesByUnit()),
+                false
+            );
+        } else {
+            $headerstring .= $this->getDetailString(
+                __('Vehicles', 'einsatzverwaltung'),
+                $this->formatter->getVehicleString($report->getVehicles(), $mayContainLinks, $showArchiveLinks)
+            );
         }
-        return "";
+
+        $additionalForces = $this->formatter->getAdditionalForces($report, $mayContainLinks, $showArchiveLinks);
+        $headerstring .= $this->getDetailString('Weitere Kr&auml;fte', $additionalForces);
+
+        return "<p>$headerstring</p>";
+        */
     }
 
     private function addDetailRow($title, $value)
@@ -159,13 +203,24 @@ class Frontend
      *
      * @return string Formatiertes Einsatzdetail
      */
-    private function getDetailString($title, $value, $newline = true)
+    private function getDetailString(string $title, string $value, bool $newline = true): string
     {
         if ($this->options->isHideEmptyDetails() && (!isset($value) || $value === '')) {
             return '';
         }
 
+<<<<<<< HEAD
         return '<strong>' . $title . '</strong> ' . $value . ($newline ? '&nbsp;<br>' : '&nbsp;');
+=======
+        /* translators: Single incident detail, 1: Label, 2: Value */
+        $format = __('<b>%1$s:</b> %2$s', 'einsatzverwaltung');
+        $filteredFormat = wp_kses($format, ['b' => []]);
+        if ($newline) {
+            $filteredFormat .= '<br>';
+        }
+
+        return sprintf($filteredFormat, $title, $value);
+>>>>>>> b001eb8106d250d53586541015134c31f24bfd4d
     }
 
 
@@ -176,7 +231,7 @@ class Frontend
      *
      * @return string Mit Einsatzdetails angereicherter Beitragstext
      */
-    public function renderContent($content)
+    public function renderContent(string $content): string
     {
         global $post;
 
@@ -196,8 +251,13 @@ class Frontend
             if (empty($content) && !empty($replacementText)) {
                 $content = sprintf('<p>%s</p>', esc_html($replacementText));
             }
+<<<<<<< HEAD
 
             $templateWithData = $this->formatter->formatIncidentData($template, array(), $post, 'post');
+=======
+            
+            $templateWithData = $this->formatter->formatIncidentData($template, array(), $post);
+>>>>>>> b001eb8106d250d53586541015134c31f24bfd4d
             $templateWithContent = str_replace('%content%', $content, $templateWithData);
             return stripslashes(wp_filter_post_kses(addslashes($templateWithContent)));
         }
@@ -207,7 +267,7 @@ class Frontend
         }
 
         // Fallback auf das klassische Layout
-        $header = $this->getEinsatzberichtHeader($post, true, true);
+        $header = $this->getEinsatzberichtHeader($post);
         $content = $this->prepareContent($content);
 
         return $header . '<hr>' . $content;
@@ -218,7 +278,7 @@ class Frontend
      *
      * @return bool
      */
-    private function useReportTemplate()
+    private function useReportTemplate(): bool
     {
         $useTemplate = get_option('einsatzverwaltung_use_reporttemplate', 'no');
 
@@ -249,7 +309,7 @@ class Frontend
      * @return string Der Beitragstext mit einer vorangestellten Überschrift. Wenn der Beitragstext leer ist, wird ein
      * Ersatztext zurückgegeben
      */
-    private function prepareContent($content)
+    private function prepareContent(string $content): string
     {
         $replacementText = get_option('einsatzverwaltung_report_contentifempty', '');
         if (!empty($replacementText)) {
@@ -269,7 +329,7 @@ class Frontend
      *
      * @return string Der Auszug
      */
-    public function filterEinsatzExcerpt($excerpt)
+    public function filterEinsatzExcerpt(string $excerpt): string
     {
         global $post;
         if (get_post_type() !== 'einsatz') {
@@ -295,7 +355,7 @@ class Frontend
      *
      * @param WP_Query $query
      */
-    public function addReportsToQuery($query)
+    public function addReportsToQuery(WP_Query $query)
     {
         // Nur, wenn Filter erlaubt sind, soll weitergemacht werden
         if (!empty($query->query_vars['suppress_filters'])) {

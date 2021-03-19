@@ -2,6 +2,7 @@
 namespace abrain\Einsatzverwaltung\Admin;
 
 use abrain\Einsatzverwaltung\Model\IncidentReport;
+use abrain\Einsatzverwaltung\Types\IncidentType;
 use abrain\Einsatzverwaltung\Types\Report;
 use abrain\Einsatzverwaltung\Types\Unit;
 use abrain\Einsatzverwaltung\Types\Vehicle;
@@ -12,21 +13,28 @@ use wpdb;
 use function add_meta_box;
 use function array_filter;
 use function array_intersect;
+use function array_key_exists;
 use function array_map;
 use function checked;
 use function esc_attr;
+use function esc_attr__;
 use function esc_html;
-use function get_post_type_object;
-use function get_posts;
+use function esc_html__;
 use function get_taxonomy;
 use function get_term_meta;
 use function get_terms;
 use function get_the_terms;
 use function in_array;
+use function is_wp_error;
+use function join;
+use function preg_grep;
+use function preg_match;
+use function preg_match_all;
 use function printf;
 use function sprintf;
 use function str_replace;
 use function usort;
+use const PREG_GREP_INVERT;
 
 /**
  * Customizations for the edit screen for the IncidentReport custom post type.
@@ -50,7 +58,7 @@ class ReportEditScreen extends EditScreen
     {
         add_meta_box(
             'einsatzverwaltung_meta_box',
-            'Einsatzdetails',
+            __('Incident details', 'einsatzverwaltung'),
             array($this, 'displayMetaBoxEinsatzdetails'),
             'einsatz',
             'normal',
@@ -62,7 +70,7 @@ class ReportEditScreen extends EditScreen
         );
         add_meta_box(
             'einsatzverwaltung_meta_annotations',
-            'Vermerke',
+            __('Annotations', 'einsatzverwaltung'),
             array($this, 'displayMetaBoxAnnotations'),
             'einsatz',
             'side',
@@ -74,7 +82,7 @@ class ReportEditScreen extends EditScreen
         );
         add_meta_box(
             'einsatzartdiv',
-            'Einsatzart',
+            __('Incident Category', 'einsatzverwaltung'),
             array('abrain\Einsatzverwaltung\Admin\ReportEditScreen', 'displayMetaBoxEinsatzart'),
             'einsatz',
             'side',
@@ -115,26 +123,26 @@ class ReportEditScreen extends EditScreen
      *
      * @param WP_Post $post Das Post-Objekt des aktuell bearbeiteten Einsatzberichts
      */
-    public function displayMetaBoxAnnotations($post)
+    public function displayMetaBoxAnnotations(WP_Post $post)
     {
         $report = new IncidentReport($post);
 
         $this->echoInputCheckbox(
-            'Fehlalarm',
+            __('False alarm', 'einsatzverwaltung'),
             'einsatz_fehlalarm',
             $report->isFalseAlarm()
         );
         echo '<br>';
 
         $this->echoInputCheckbox(
-            'Besonderer Einsatz',
+            __('Featured report', 'einsatzverwaltung'),
             'einsatz_special',
             $report->isSpecial()
         );
         echo '<br>';
 
         $this->echoInputCheckbox(
-            'Bilder im Bericht',
+            __('Report contains pictures', 'einsatzverwaltung'),
             'einsatz_hasimages',
             $report->hasImages()
         );
@@ -145,7 +153,7 @@ class ReportEditScreen extends EditScreen
      *
      * @param WP_Post $post Das Post-Objekt des aktuell bearbeiteten Einsatzberichts
      */
-    public function displayMetaBoxEinsatzdetails($post)
+    public function displayMetaBoxEinsatzdetails(WP_Post $post)
     {
         // Use nonce for verification
         wp_nonce_field('save_einsatz_details', 'einsatzverwaltung_nonce');
@@ -162,14 +170,18 @@ class ReportEditScreen extends EditScreen
 
         $names = $this->getEinsatzleiterNamen();
         printf('<input type="hidden" id="einsatzleiter_used_values" value="%s" />', esc_attr(implode(',', $names)));
-        echo '<div style="display: flex; flex-wrap: nowrap; justify-content: space-between"><table><tbody>';
+        echo '<div style="display: flex; flex-wrap: wrap; justify-content: space-between"><table><tbody>';
 
         if (get_option('einsatzverwaltung_incidentnumbers_auto', '0') === '1') {
             $numberText = $report->isDraft() ? __('Will be generated upon publication', 'einsatzverwaltung') : $nummer;
-            printf('<tr><td>Einsatznummer</td><td class="incidentnumber">%s</td></tr>', esc_html($numberText));
+            printf(
+                '<tr><td>%s</td><td class="incidentnumber">%s</td></tr>',
+                esc_html__('Incident number', 'einsatzverwaltung'),
+                esc_html($numberText)
+            );
         } else {
             $this->echoInputText(
-                'Einsatznummer',
+                __('Incident number', 'einsatzverwaltung'),
                 'einsatzverwaltung_nummer',
                 esc_attr($nummer),
                 '',
@@ -178,23 +190,23 @@ class ReportEditScreen extends EditScreen
         }
 
         $this->echoInputText(
-            'Alarmzeit',
+            __('Alarm time', 'einsatzverwaltung'),
             'einsatzverwaltung_alarmzeit',
             esc_attr($alarmzeit->format('Y-m-d H:i')),
-            'JJJJ-MM-TT hh:mm'
+            'YYYY-MM-TT hh:mm'
         );
 
         $this->echoInputText(
-            'Einsatzende',
+            __('End time', 'einsatzverwaltung'),
             'einsatz_einsatzende',
             esc_attr($einsatzende),
-            'JJJJ-MM-TT hh:mm'
+            'YYYY-MM-TT hh:mm'
         );
 
         echo '</tbody></table><table><tbody>';
 
         $this->echoInputText(
-            'Einsatzort',
+            __('Location', 'einsatzverwaltung'),
             'einsatz_einsatzort',
             esc_attr($einsatzort)
         );
@@ -214,14 +226,17 @@ class ReportEditScreen extends EditScreen
         echo '</tbody></table>';
 
         echo '<div>';
-        printf('<label for="einsatz_weight">%1$s</label>&nbsp;', 'Anzahl Eins&auml;tze:');
+        printf(
+            '<label for="einsatz_weight">%1$s</label>&nbsp;',
+            esc_html__('Number of incidents covered in this report:', 'einsatzverwaltung')
+        );
         printf(
             '<input type="number" id="einsatz_weight" name="einsatz_weight" value="%1$s" min="1" size="3"/>',
             esc_attr($weight)
         );
         printf(
             '<p class="description">%1$s</p>',
-            'Bei Großereignissen (z. B. Unwetter) kann ein einzelner Einsatzbericht stellvertretend für mehrere Einsätze stehen. Die Nummerierung wird entsprechend angepasst.'
+            esc_html__('Influences numbering and report counting.', 'einsatzverwaltung')
         );
         echo '</div></div>';
     }
@@ -231,7 +246,7 @@ class ReportEditScreen extends EditScreen
      *
      * @param WP_Post $post Post-Object
      */
-    public static function displayMetaBoxEinsatzart($post)
+    public static function displayMetaBoxEinsatzart(WP_Post $post)
     {
         $report = new IncidentReport($post);
         $typeOfIncident = $report->getTypeOfIncident();
@@ -243,32 +258,32 @@ class ReportEditScreen extends EditScreen
      */
     public function displayMetaBoxUnits(WP_Post $post)
     {
-        $units = get_posts(array(
-            'post_type' => Unit::getSlug(),
-            'numberposts' => -1,
-            'order' => 'ASC',
-            'orderby' => 'name'
+        $units = get_terms(array(
+            'taxonomy' => Unit::getSlug(),
+            'hide_empty' => false
         ));
-        if (empty($units)) {
-            $postTypeObject = get_post_type_object(Unit::getSlug());
-            printf("<div>%s</div>", esc_html($postTypeObject->labels->not_found));
+
+        if (is_wp_error($units)) {
+            printf("<div>%s</div>", $units->get_error_message());
             return;
         }
 
-        $report = new IncidentReport($post);
-        $assignedUnits = array_map(function (WP_Post $unit) {
-            return $unit->ID;
-        }, $report->getUnits());
-        echo '<div><ul>';
-        foreach ($units as $unit) {
-            $assigned = in_array($unit->ID, $assignedUnits);
-            printf(
-                '<li><label><input type="checkbox" name="evw_units[]" value="%d"%s>%s</label></li>',
-                esc_attr($unit->ID),
-                checked($assigned, true, false),
-                esc_html($unit->post_title)
-            );
+        $taxonomyObject = get_taxonomy(Unit::getSlug());
+        if (empty($units)) {
+            printf("<div>%s</div>", esc_html($taxonomyObject->labels->no_terms));
+            return;
         }
+
+        // Sort the units according to the custom order numbers
+        usort($units, array(Unit::class, 'compare'));
+
+        $report = new IncidentReport($post);
+        $assignedUnits = array_map(function (WP_Term $unit) {
+            return $unit->term_id;
+        }, $report->getUnits());
+
+        echo '<div><ul>';
+        $this->echoTermCheckboxes($units, $taxonomyObject, $assignedUnits);
         echo '</ul></div>';
     }
 
@@ -327,7 +342,7 @@ class ReportEditScreen extends EditScreen
             }, $outOfServiceVehicles);
             echo empty(array_intersect($assignedVehicleIds, $outOfServiceIds)) ? '<details>' : '<details open="open">';
 
-            echo '<summary>Fahrzeuge au&szlig;er Dienst</summary>';
+            echo sprintf("<summary>%s</summary>", esc_html__('Out of service', 'einsatzverwaltung'));
             $this->echoTermCheckboxes($outOfServiceVehicles, $taxonomyObject, $assignedVehicleIds);
             echo '</details>';
         }
@@ -339,11 +354,11 @@ class ReportEditScreen extends EditScreen
      *
      * @param string $selected Slug der ausgewählten Einsatzart
      */
-    public static function dropdownEinsatzart($selected)
+    public static function dropdownEinsatzart(string $selected)
     {
         wp_dropdown_categories(array(
             'show_option_all'    => '',
-            'show_option_none'   => '- keine -',
+            'show_option_none'   => _x('- none -', 'incident category dropdown', 'einsatzverwaltung'),
             'orderby'            => 'NAME',
             'order'              => 'ASC',
             'show_count'         => false,
@@ -358,6 +373,59 @@ class ReportEditScreen extends EditScreen
     }
 
     /**
+     * Modifies the output of wp_dropdown_categories() for the taxonomy einsatzart to put entries marked as outdated at
+     * the end of the list.
+     *
+     * @param string $output
+     * @param array $parsedArgs
+     *
+     * @return string
+     */
+    public function filterIncidentCategoryDropdown(string $output, array $parsedArgs): string
+    {
+        if (!array_key_exists('taxonomy', $parsedArgs) || $parsedArgs['taxonomy'] !== IncidentType::getSlug()) {
+            return $output;
+        }
+
+        $outdatedTermsIds = get_terms([
+            'taxonomy' => IncidentType::getSlug(),
+            'hide_empty' => false,
+            'fields' => 'ids',
+            'meta_query' => [
+                ['key' => 'outdated', 'value' => '1']
+            ]
+        ]);
+        if (empty($outdatedTermsIds)) {
+            // If no categories are marked as outdated, don't alter the output
+            return $output;
+        }
+
+        // Separeate the select opening tag and the options
+        if (preg_match('/^(<select [^>]+>)(.*?)<\/select>$/ms', $output, $matches) !== 1) {
+            return $output;
+        }
+
+        // Extract the option tags
+        if (empty(preg_match_all('/<option [^>]+>[^<]+<\/option>/', $matches[2], $options))) {
+            return $output;
+        }
+
+        // Separate the current from the outdated options
+        $pattern = sprintf('/value="(%s)"/', join('|', $outdatedTermsIds));
+        $currentOptions = preg_grep($pattern, $options[0], PREG_GREP_INVERT);
+        $outdatedOptions = preg_grep($pattern, $options[0]);
+
+        // Begin the new output with opening the select tag
+        $newOutput = $matches[1];
+        $newOutput .= join("\n", $currentOptions);
+        $newOutput .= sprintf('<optgroup label="%s">', esc_attr__('Outdated', 'einsatzverwaltung'));
+        $newOutput .= join("\n", $outdatedOptions);
+        $newOutput .= '</optgroup></select>';
+
+        return $newOutput;
+    }
+
+    /**
      * Gibt ein Eingabefeld für die Metabox aus
      *
      * @param string $label Beschriftung
@@ -366,7 +434,7 @@ class ReportEditScreen extends EditScreen
      * @param string $placeholder Platzhalter
      * @param int $size Größe des Eingabefelds
      */
-    private function echoInputText($label, $name, $value, $placeholder = '', $size = 20)
+    private function echoInputText(string $label, string $name, string $value, $placeholder = '', $size = 20)
     {
         printf('<tr><td><label for="%1$s">%2$s</label></td>', esc_attr($name), esc_html($label));
         printf(
@@ -385,7 +453,7 @@ class ReportEditScreen extends EditScreen
      * @param string $name Feld-ID
      * @param bool $state Zustandswert
      */
-    private function echoInputCheckbox($label, $name, $state)
+    private function echoInputCheckbox(string $label, string $name, bool $state)
     {
         printf(
             '<input type="checkbox" id="%1$s" name="%1$s" value="1" %2$s/><label for="%1$s">%3$s</label>',
@@ -400,7 +468,7 @@ class ReportEditScreen extends EditScreen
      * @param WP_Taxonomy $taxonomy
      * @param int[] $assignedIds
      */
-    private function echoTermCheckboxes($terms, $taxonomy, $assignedIds)
+    private function echoTermCheckboxes(array $terms, WP_Taxonomy $taxonomy, array $assignedIds)
     {
         $format = '<li><label><input type="checkbox" name="tax_input[%1$s][]" value="%2$s" %3$s>%4$s</label></li>';
         if ($taxonomy->hierarchical) {
@@ -423,9 +491,8 @@ class ReportEditScreen extends EditScreen
      *
      * @return array
      */
-    public function getEinsatzleiterNamen()
+    public function getEinsatzleiterNamen(): array
     {
-        /** @var wpdb $wpdb */
         global $wpdb;
 
         $names = array();
