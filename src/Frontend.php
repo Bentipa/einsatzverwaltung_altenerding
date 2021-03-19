@@ -101,50 +101,50 @@ class Frontend
         $showTypeArchiveLink = $showArchiveLinks && $this->options->isShowEinsatzartArchive();
         $art = $this->formatter->getTypeOfIncident($report, $mayContainLinks, $showTypeArchiveLink);
 
-            if ($report->isFalseAlarm()) {
-                $art = (empty($art) ? 'Fehlalarm' : $art . ' (Fehlalarm)');
-            }
+        if ($report->isFalseAlarm()) {
+            $art = (empty($art) ? 'Fehlalarm' : $art . ' (Fehlalarm)');
+        }
 
-            $einsatzort = $report->getLocation();
-            $einsatzleiter = $report->getIncidentCommander();
-            $mannschaft = $report->getWorkforce();
+        $einsatzort = $report->getLocation();
+        $einsatzleiter = $report->getIncidentCommander();
+        $mannschaft = $report->getWorkforce();
 
-            $vehicles = $this->formatter->getVehicles($report, $mayContainLinks, $showArchiveLinks);
-            $units = $this->formatter->getUnits($report);
-            $additionalForces = $this->formatter->getAdditionalForces($report, $mayContainLinks, $showArchiveLinks);
+        $vehicles = $this->formatter->getVehicles($report, $mayContainLinks, $showArchiveLinks);
+        $units = $this->formatter->getUnits($report);
+        $additionalForces = $this->formatter->getAdditionalForces($report, $mayContainLinks, $showArchiveLinks);
 
-            $timeOfAlerting = $report->getTimeOfAlerting();
-            $datumsformat = get_option('date_format', 'd.m.Y');
-            $zeitformat = get_option('time_format', 'H:i');
-            $einsatz_datum = ($timeOfAlerting ? date_i18n($datumsformat, $timeOfAlerting->getTimestamp()) : '-');
-            $einsatz_zeit = ($timeOfAlerting ? date_i18n($zeitformat, $timeOfAlerting->getTimestamp()) . ' Uhr' : '-');
+        $timeOfAlerting = $report->getTimeOfAlerting();
+        $datumsformat = get_option('date_format', 'd.m.Y');
+        $zeitformat = get_option('time_format', 'H:i');
+        $einsatz_datum = ($timeOfAlerting ? date_i18n($datumsformat, $timeOfAlerting->getTimestamp()) : '-');
+        $einsatz_zeit = ($timeOfAlerting ? date_i18n($zeitformat, $timeOfAlerting->getTimestamp()) . ' Uhr' : '-');
 
-            $emergencyHeader = '<table id="emergency_info_table" cellspacing="0" cellpadding="0">';
+        $emergencyHeader = '<table id="emergency_info_table" cellspacing="0" cellpadding="0">';
 
-            $emergencyHeader .= $this->addDetailRow("Datum:", $einsatz_datum);
-            $emergencyHeader .= $this->addDetailRow("Alarmzeit:", $einsatz_zeit);
-            $emergencyHeader .= $this->addDetailRow("Alarmierungsart:", $typesOfAlerting);
-            $emergencyHeader .= $this->addDetailRow("Dauer:", $durationString);
-            $emergencyHeader .= $this->addDetailRow("Art:", $art);
+        $emergencyHeader .= $this->addDetailRow("Datum:", $einsatz_datum);
+        $emergencyHeader .= $this->addDetailRow("Alarmzeit:", $einsatz_zeit);
+        $emergencyHeader .= $this->addDetailRow("Alarmierungsart:", $typesOfAlerting);
+        $emergencyHeader .= $this->addDetailRow("Dauer:", $durationString);
+        $emergencyHeader .= $this->addDetailRow("Art:", $art);
 
-            $emergencyHeader .= $this->addDetailRow("Einsatzort:", $einsatzort);
-            $emergencyHeader .= $this->addDetailRow("Einsatzleiter:", $einsatzleiter);
-            $emergencyHeader .= $this->addDetailRow("Mannschaftsst&auml;rke:", $mannschaft);
-            $emergencyHeader .= $this->addDetailRow("Fahrzeuge:", $vehicles);
-            $emergencyHeader .= $this->addDetailRow("Alarmierte Einheiten:", $units);
-            $emergencyHeader .= $this->addDetailRow("Weitere Kr&auml;fte:", $additionalForces);
-            $emergencyHeader .= "</table>";
+        $emergencyHeader .= $this->addDetailRow("Einsatzort:", $einsatzort);
+        $emergencyHeader .= $this->addDetailRow("Einsatzleiter:", $einsatzleiter);
+        $emergencyHeader .= $this->addDetailRow("Mannschaftsst&auml;rke:", $mannschaft);
+        $emergencyHeader .= $this->addDetailRow("Fahrzeuge:", $vehicles);
+        $emergencyHeader .= $this->addDetailRow("Alarmierte Einheiten:", $units);
+        $emergencyHeader .= $this->addDetailRow("Weitere Kr&auml;fte:", $additionalForces);
+        $emergencyHeader .= "</table>";
 
-            $API_KEY = get_option("einsatzvw_settings_api_google_maps");
-            // Location Frame
-            if (isset($einsatzort) && $einsatzort !== '') {
-                $emergencyHeader .= "<h2>Einsatzort</h2>";
-                $emergencyHeader .= "<iframe width=\"700\" height=\"450\" style='max-height: 450px; max-width: 700px; width:700px; height:450px' frameborder=\"0\" src=\"https://www.google.com/maps/embed/v1/place?key=$API_KEY&q=$einsatzort\" ></iframe>";
-            }
+        $API_KEY = get_option("einsatzvw_settings_api_google_maps");
+        // Location Frame
+        if (isset($einsatzort) && $einsatzort !== '') {
+            $emergencyHeader .= "<h2>Einsatzort</h2>";
+            $emergencyHeader .= "<iframe width=\"700\" height=\"450\" style='max-height: 450px; max-width: 700px; width:700px; height:450px' frameborder=\"0\" src=\"https://www.google.com/maps/embed/v1/place?key=$API_KEY&q=$einsatzort\" ></iframe>";
+        }
 
 
-            return "<p>$emergencyHeader</p>";
-/*
+        return "<p>$emergencyHeader</p>";
+        /*
 
         $timeOfAlerting = $report->getTimeOfAlerting();
         $dateAndTime = empty($timeOfAlerting) ? '-' : sprintf(
@@ -209,9 +209,6 @@ class Frontend
             return '';
         }
 
-<<<<<<< HEAD
-        return '<strong>' . $title . '</strong> ' . $value . ($newline ? '&nbsp;<br>' : '&nbsp;');
-=======
         /* translators: Single incident detail, 1: Label, 2: Value */
         $format = __('<b>%1$s:</b> %2$s', 'einsatzverwaltung');
         $filteredFormat = wp_kses($format, ['b' => []]);
@@ -220,7 +217,6 @@ class Frontend
         }
 
         return sprintf($filteredFormat, $title, $value);
->>>>>>> b001eb8106d250d53586541015134c31f24bfd4d
     }
 
 
@@ -251,13 +247,8 @@ class Frontend
             if (empty($content) && !empty($replacementText)) {
                 $content = sprintf('<p>%s</p>', esc_html($replacementText));
             }
-<<<<<<< HEAD
 
-            $templateWithData = $this->formatter->formatIncidentData($template, array(), $post, 'post');
-=======
-            
             $templateWithData = $this->formatter->formatIncidentData($template, array(), $post);
->>>>>>> b001eb8106d250d53586541015134c31f24bfd4d
             $templateWithContent = str_replace('%content%', $content, $templateWithData);
             return stripslashes(wp_filter_post_kses(addslashes($templateWithContent)));
         }
