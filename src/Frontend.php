@@ -105,11 +105,23 @@ class Frontend
             $art = (empty($art) ? 'Fehlalarm' : $art . ' (Fehlalarm)');
         }
 
+        // <
+        // If at least one unit has been assigned to any report, show the vehicles grouped by unit
+        $unitCount = get_terms(['taxonomy' => Unit::getSlug(), 'fields' => 'count']);
+        if (is_numeric($unitCount) && $unitCount > 0) {
+            $vehicles = $this->formatter->getVehiclesByUnitString($report->getVehiclesByUnit());
+        } else {
+            $vehicles = $this->formatter->getVehicleString($report->getVehicles(), $mayContainLinks, $showArchiveLinks);
+        }
+
+        $additionalForces = $this->formatter->getAdditionalForces($report, $mayContainLinks, $showArchiveLinks);
+        // >
+
         $einsatzort = $report->getLocation();
         $einsatzleiter = $report->getIncidentCommander();
         $mannschaft = $report->getWorkforce();
 
-        $vehicles = $this->formatter->getVehicles($report, $mayContainLinks, $showArchiveLinks);
+        // $vehicles = $this->formatter->getVehicles($report, $mayContainLinks, $showArchiveLinks);
         $units = $this->formatter->getUnits($report);
         $additionalForces = $this->formatter->getAdditionalForces($report, $mayContainLinks, $showArchiveLinks);
 
@@ -144,44 +156,6 @@ class Frontend
 
 
         return "<p>$emergencyHeader</p>";
-        /*
-
-        $timeOfAlerting = $report->getTimeOfAlerting();
-        $dateAndTime = empty($timeOfAlerting) ? '-' : sprintf(
-            // translators: 1: Date, 2: Time.
-            __('%1$s at %2$s', 'einsatzverwaltung'),
-            date_i18n(get_option('date_format'), $timeOfAlerting->getTimestamp()),
-            date_i18n(get_option('time_format'), $timeOfAlerting->getTimestamp())
-        );
-        $headerstring = $this->getDetailString(__('Date', 'einsatzverwaltung'), $dateAndTime);
-
-        $headerstring .= $this->getDetailString('Alarmierungsart', $this->formatter->getTypesOfAlerting($report));
-        $headerstring .= $this->getDetailString(__('Duration', 'einsatzverwaltung'), $durationString);
-        $headerstring .= $this->getDetailString(__('Incident Category', 'einsatzverwaltung'), $art);
-        $headerstring .= $this->getDetailString(__('Location', 'einsatzverwaltung'), $report->getLocation());
-        $headerstring .= $this->getDetailString('Einsatzleiter', $report->getIncidentCommander());
-        $headerstring .= $this->getDetailString('Mannschaftsst&auml;rke', $report->getWorkforce());
-
-        // If at least one unit has been assigned to any report, show the vehicles grouped by unit
-        $unitCount = get_terms(['taxonomy' => Unit::getSlug(), 'fields' => 'count']);
-        if (is_numeric($unitCount) && $unitCount > 0) {
-            $headerstring .= $this->getDetailString(
-                __('Vehicles', 'einsatzverwaltung'),
-                $this->formatter->getVehiclesByUnitString($report->getVehiclesByUnit()),
-                false
-            );
-        } else {
-            $headerstring .= $this->getDetailString(
-                __('Vehicles', 'einsatzverwaltung'),
-                $this->formatter->getVehicleString($report->getVehicles(), $mayContainLinks, $showArchiveLinks)
-            );
-        }
-
-        $additionalForces = $this->formatter->getAdditionalForces($report, $mayContainLinks, $showArchiveLinks);
-        $headerstring .= $this->getDetailString('Weitere Kr&auml;fte', $additionalForces);
-
-        return "<p>$headerstring</p>";
-        */
     }
 
     private function addDetailRow($title, $value)

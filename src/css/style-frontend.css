@@ -1,3 +1,11 @@
+/* Start Custom AE */
+.ev-unit-vehicle-list {
+    margin-top: 0px !important;
+    margin-left: 1em !important;
+}
+
+/* End Custom AE */
+
 .einsatzverwaltung-reportlist {
     width: 100%;
     border-collapse: collapse;
@@ -18,7 +26,8 @@
     display: none;
 }
 
-.einsatzverwaltung-reportlist .einsatz-title-month td, .einsatzverwaltung-reportlist .einsatz-title-quarter td {
+.einsatzverwaltung-reportlist .einsatz-title-month td,
+.einsatzverwaltung-reportlist .einsatz-title-quarter td {
     border: none;
     font-size: 1.3em;
     padding: 3px 8px;
@@ -35,7 +44,8 @@
         padding-bottom: 5px;
     }
 
-    .einsatzverwaltung-reportlist tr.einsatz-title-month, .einsatzverwaltung-reportlist tr.einsatz-title-quarter {
+    .einsatzverwaltung-reportlist tr.einsatz-title-month,
+    .einsatzverwaltung-reportlist tr.einsatz-title-quarter {
         padding-top: 0;
         padding-bottom: 0;
     }
@@ -44,12 +54,13 @@
         display: none;
     }
 
-    .einsatzverwaltung-reportlist tr.report > td.smallscreen {
+    .einsatzverwaltung-reportlist tr.report>td.smallscreen {
         display: block;
         white-space: normal;
     }
 
-    .einsatzverwaltung-reportlist tr.einsatz-title-month td,.einsatzverwaltung-reportlist tr.einsatz-title-quarter td {
+    .einsatzverwaltung-reportlist tr.einsatz-title-month td,
+    .einsatzverwaltung-reportlist tr.einsatz-title-quarter td {
         display: block;
     }
 
@@ -62,7 +73,7 @@
         margin-left: 10px;
     }
 
-    .einsatzverwaltung-reportlist .annotation-icon-bar > i {
+    .einsatzverwaltung-reportlist .annotation-icon-bar>i {
         margin: 0 2px;
     }
 }

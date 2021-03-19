@@ -1,4 +1,5 @@
 <?php
+
 namespace abrain\Einsatzverwaltung\Util;
 
 use abrain\Einsatzverwaltung\Frontend\AnnotationIconBar;
@@ -45,7 +46,7 @@ class Formatter
         '%duration%' => 'Dauer des Einsatzes',
         '%incidentCommander%' => 'Einsatzleiter',
         '%incidentType%' => 'Art des Einsatzes',
-        '%incidentTypeHierarchical%' =>'Art des Einsatzes inkl. übergeordneten Einsatzarten',
+        '%incidentTypeHierarchical%' => 'Art des Einsatzes inkl. übergeordneten Einsatzarten',
         '%incidentTypeColor%' => 'Farbe der Art des Einsatzes',
         '%url%' => 'URL zum Einsatzbericht',
         '%location%' => 'Ort des Einsatzes',
@@ -309,7 +310,7 @@ class Formatter
         $string = '';
         do {
             if (!empty($string)) {
-                $string = ' &gt; '.$string;
+                $string = ' &gt; ' . $string;
                 $typeOfIncident = get_term($typeOfIncident->parent, 'einsatzart');
             }
 
@@ -422,7 +423,7 @@ class Formatter
             return '';
         }
 
-        $string = '<ul>';
+        $string = '<ul class="ev-unit-vehicle-list">';
         foreach ($vehiclesByUnitId as $unitId => $vehicles) {
             if ($unitId === -1) {
                 $string .= sprintf(

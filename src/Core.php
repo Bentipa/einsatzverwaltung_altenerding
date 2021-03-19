@@ -12,7 +12,7 @@ use function add_action;
  */
 class Core
 {
-    const VERSION = '1.8.0.AE';
+    const VERSION = '1.8.1.AE';
     const DB_VERSION = 60;
 
 
