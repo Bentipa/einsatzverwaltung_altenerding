@@ -75,7 +75,7 @@ class MainPage
     public function addToSettingsMenu()
     {
         add_options_page(
-            'Einstellungen',
+            __('Settings', 'einsatzverwaltung'),
             'Einsatzverwaltung',
             'manage_options',
             self::EVW_SETTINGS_SLUG,
@@ -131,7 +131,7 @@ class MainPage
                 self::EVW_SETTINGS_SLUG,
                 $subPage->identifier,
                 $this->isCurrentSubPage($subPage) ? "nav-tab nav-tab-active" : "nav-tab",
-                $subPage->title
+                esc_html($subPage->title)
             );
         }
         echo '</nav>';
@@ -154,7 +154,7 @@ class MainPage
      *
      * @return WP_Post|null
      */
-    private function getConflictingPage()
+    private function getConflictingPage(): ?WP_Post
     {
         $reportArchiveUrl = get_post_type_archive_link(ReportType::getSlug());
 
@@ -171,7 +171,7 @@ class MainPage
     /**
      * @return SubPage
      */
-    private function getCurrentSubPage()
+    private function getCurrentSubPage(): SubPage
     {
         $flags = FILTER_FLAG_STRIP_LOW | FILTER_FLAG_STRIP_HIGH;
         $tab = filter_input(INPUT_GET, 'tab', FILTER_SANITIZE_STRING, $flags);
@@ -189,7 +189,7 @@ class MainPage
      *
      * @return bool Returns true if the supplied sub page matches the currently displayed sub page
      */
-    private function isCurrentSubPage(SubPage $subPage)
+    private function isCurrentSubPage(SubPage $subPage): bool
     {
         return $subPage === $this->getCurrentSubPage();
     }

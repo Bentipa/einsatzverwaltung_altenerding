@@ -5,6 +5,7 @@ use abrain\Einsatzverwaltung\Frontend\AnnotationIconBar;
 use abrain\Einsatzverwaltung\Model\IncidentReport;
 use abrain\Einsatzverwaltung\Util\Formatter;
 use DateTime;
+use function esc_html__;
 use function intval;
 use function sprintf;
 
@@ -86,7 +87,7 @@ class Renderer
         if (empty($reports)) {
             $this->string = sprintf(
                 '<span>%s</span>',
-                esc_html('F&uuml;r den gew&auml;hlten Zeitraum stehen keine Einsatzberichte zur Verf&uuml;gung')
+                esc_html__('There are no incident reports for the chosen period.', 'einsatzverwaltung')
             );
             return;
         }
@@ -142,7 +143,7 @@ class Renderer
      *
      * @return string HTML-Code der Liste
      */
-    public function getList($reports, Parameters $parameters)
+    public function getList($reports, Parameters $parameters): string
     {
         $this->string = '';
         $this->constructList($reports, $parameters);
@@ -167,7 +168,8 @@ class Renderer
     private function beginTable($year, Parameters $parameters)
     {
         if ($parameters->showHeading && $year !== false) {
-            $this->string .= '<h2>Eins&auml;tze '.$year.'</h2>';
+            // translators: 1: a year
+            $this->string .= '<h2>' . esc_html(sprintf(__('Incidents %1$d', 'einsatzverwaltung'), $year)) . '</h2>';
         }
         $this->string .= '<table class="' . self::TABLECLASS . '"><tbody>';
         $this->rowsSinceLastHeader = 0;
@@ -230,7 +232,7 @@ class Renderer
      *
      * @return string HTML markup for the table cell only visible on devices with a small screen (e.g. smartphones)
      */
-    private function getSmallScreenCell(IncidentReport $report, Parameters $parameters)
+    private function getSmallScreenCell(IncidentReport $report, Parameters $parameters): string
     {
         $content = '';
         $annotations = '';
@@ -271,7 +273,7 @@ class Renderer
      *
      * @return string
      */
-    private function getCellMarkup(IncidentReport $report, Parameters $parameters, $columnId)
+    private function getCellMarkup(IncidentReport $report, Parameters $parameters, $columnId): string
     {
         $cellContent = $this->getCellContent($report, $columnId, $parameters);
 
@@ -295,7 +297,7 @@ class Renderer
      *
      * @return bool
      */
-    private function isCellLinkToReport(IncidentReport $report, $columnId, Parameters $parameters)
+    private function isCellLinkToReport(IncidentReport $report, $columnId, Parameters $parameters): bool
     {
         $linkToReport = $parameters->linkEmptyReports || $report->hasContent();
         $columnsLinkingReport = $parameters->getColumnsLinkingReport();
@@ -323,7 +325,7 @@ class Renderer
      *
      * @return string
      */
-    private function getCellContent($report, $colId, Parameters $parameters)
+    private function getCellContent($report, $colId, Parameters $parameters): string
     {
         if (empty($report)) {
             return '&nbsp;';
@@ -362,7 +364,7 @@ class Renderer
                 $cellContent = $this->formatter->getDurationString($minutes, true);
                 break;
             case 'vehicles':
-                $cellContent = $this->formatter->getVehicles($report, $parameters->linkVehicles, false);
+                $cellContent = $this->formatter->getVehicleString($report->getVehicles(), $parameters->linkVehicles, false);
                 break;
             case 'alarmType':
                 $cellContent = $this->formatter->getTypesOfAlerting($report);
@@ -386,10 +388,10 @@ class Renderer
                 }
                 break;
             case 'annotationImages':
-                $cellContent = AnnotationIconBar::getInstance()->render($report, array('images'));
+                $cellContent = AnnotationIconBar::getInstance()->render($report->getPostId(), array('images'));
                 break;
             case 'annotationSpecial':
-                $cellContent = AnnotationIconBar::getInstance()->render($report, array('special'));
+                $cellContent = AnnotationIconBar::getInstance()->render($report->getPostId(), array('special'));
                 break;
             default:
                 $cellContent = '';
@@ -475,7 +477,7 @@ class Renderer
      *
      * @return string
      */
-    public static function getDynamicCss()
+    public static function getDynamicCss(): string
     {
         if (empty(self::$settings)) {
             self::$settings = new Settings();

@@ -10,16 +10,19 @@ use DateTime;
 use WP_Post;
 use WP_Term;
 use function array_map;
+use function current_theme_supports;
 use function date;
 use function date_i18n;
 use function esc_html;
 use function esc_url;
 use function get_permalink;
+use function get_term;
 use function get_term_link;
 use function get_term_meta;
+use function get_the_post_thumbnail;
+use function has_post_thumbnail;
 use function intval;
 use function join;
-use function sanitize_post_field;
 use function sprintf;
 
 /**
@@ -55,6 +58,7 @@ class Formatter
         '%typesOfAlerting%' => 'Alarmierungsarten',
         '%content%' => 'Berichtstext',
         '%featuredImage%' => 'Beitragsbild',
+        '%featuredImageThumbnail%' => 'Beitragsvorschaubild',
         '%yearArchive%' => 'Link zum Jahresarchiv',
         '%workforce%' => 'Mannschaftsstärke',
         '%units%' => 'Einheiten',
@@ -92,12 +96,12 @@ class Formatter
     /**
      * @param string $pattern
      * @param array $allowedTags
-     * @param WP_Post $post
+     * @param WP_Post|null $post
      * @param string $context
      *
      * @return mixed
      */
-    public function formatIncidentData($pattern, $allowedTags = array(), $post = null, $context = 'post')
+    public function formatIncidentData(string $pattern, $allowedTags = array(), ?WP_Post $post = null, $context = 'post'): string
     {
         if (empty($allowedTags)) {
             $allowedTags = array_keys($this->availableTags);
@@ -116,13 +120,14 @@ class Formatter
     }
 
     /**
-     * @param WP_Post $post
+     * @param WP_Post|null $post
      * @param string $pattern
      * @param string $tag
      * @param string $context
+     *
      * @return mixed|string
      */
-    private function format($post, $pattern, $tag, $context = 'post')
+    private function format(?WP_Post $post, string $pattern, string $tag, $context = 'post'): string
     {
         if ($post == null && !in_array($tag, $this->tagsNotNeedingPost)) {
             return $pattern;
@@ -163,7 +168,7 @@ class Formatter
                 $replace = $incidentReport->getIncidentCommander();
                 break;
             case '%incidentType%':
-                $replace = $this->getTypeOfIncidentString($incidentReport, $context, false);
+                $replace = $this->getTypeOfIncidentString($incidentReport, $context);
                 break;
             case '%incidentTypeHierarchical%':
                 $replace = $this->getTypeOfIncidentString($incidentReport, $context, true);
@@ -192,10 +197,10 @@ class Formatter
                 }
                 break;
             case '%annotations%':
-                $replace = $this->annotationIconBar->render($incidentReport);
+                $replace = $this->annotationIconBar->render($incidentReport->getPostId());
                 break;
             case '%vehicles%':
-                $replace = $this->getVehicles($incidentReport, ($context === 'post'), ($context === 'post'));
+                $replace = $this->getVehicleString($incidentReport->getVehicles(), ($context === 'post'), ($context === 'post'));
                 break;
             case '%additionalForces%':
                 $replace = $this->getAdditionalForces($incidentReport, ($context === 'post'), ($context === 'post'));
@@ -208,6 +213,9 @@ class Formatter
                 break;
             case '%featuredImage%':
                 $replace = current_theme_supports('post-thumbnails') ? get_the_post_thumbnail($post->ID) : '';
+                break;
+            case '%featuredImageThumbnail%':
+                $replace = has_post_thumbnail($post->ID) ? get_the_post_thumbnail($post->ID, 'thumbnail') : '';
                 break;
             case '%yearArchive%':
                 // Take the year of the report, or the current year if used outside a specific report
@@ -231,7 +239,7 @@ class Formatter
      * @param WP_Term|false $typeOfIncident
      * @return string
      */
-    public function getColorOfTypeOfIncident($typeOfIncident)
+    public function getColorOfTypeOfIncident($typeOfIncident): string
     {
         if (empty($typeOfIncident)) {
             return 'inherit';
@@ -257,7 +265,7 @@ class Formatter
      *
      * @return string
      */
-    public function getTypesOfAlerting($report)
+    public function getTypesOfAlerting(IncidentReport $report): string
     {
         if (empty($report)) {
             return '';
@@ -286,7 +294,7 @@ class Formatter
      *
      * @return string
      */
-    public static function getTypeOfIncident($report, $makeLinks, $showArchiveLinks, $showHierarchy = true)
+    public static function getTypeOfIncident(IncidentReport $report, bool $makeLinks, bool $showArchiveLinks, $showHierarchy = true): string
     {
         if (empty($report)) {
             return '';
@@ -325,7 +333,7 @@ class Formatter
      *
      * @return string
      */
-    private function getTypeOfIncidentString(IncidentReport $incidentReport, $context, $showHierarchy = false)
+    private function getTypeOfIncidentString(IncidentReport $incidentReport, string $context, $showHierarchy = false): string
     {
         $showTypeArchive = get_option('einsatzvw_show_einsatzart_archive') === '1';
         return $this->getTypeOfIncident($incidentReport, ($context === 'post'), $showTypeArchive, $showHierarchy);
@@ -337,53 +345,56 @@ class Formatter
      *
      * @return string
      */
-    public function getUnits(IncidentReport $report, $addLinks = false)
+    public function getUnits(IncidentReport $report, $addLinks = false): string
     {
         $units = $report->getUnits();
 
-        if (!$addLinks) {
-            // Only return the names
-            $unitNames = array_map(function (WP_Post $unit) {
-                return sanitize_post_field('post_title', $unit->post_title, $unit->ID);
-            }, $units);
-            return join(', ', $unitNames);
+        if ($addLinks) {
+            $linkedUnitNames = array_map([$this, 'getUnitNameWithLink'], $units);
+            return join(', ', $linkedUnitNames);
         }
 
-        // Return the names, linked to the respective info page if URL has been set
-        $linkedUnitNames = array_map(function (WP_Post $unit) {
-            $name = sanitize_post_field('post_title', $unit->post_title, $unit->ID);
-
-            $infoUrl = Unit::getInfoUrl($unit);
-            if (empty($infoUrl)) {
-                return $name;
-            }
-
-            return sprintf(
-                '<a href="%s" title="Mehr Informationen zu %s">%s</a>',
-                esc_url($infoUrl),
-                esc_attr($name),
-                esc_html($name)
-            );
+        // Only return the names
+        $unitNames = array_map(function (WP_Term $unit) {
+            return esc_html($unit->name);
         }, $units);
 
-        return join(', ', $linkedUnitNames);
+        return join(', ', $unitNames);
     }
 
     /**
-     * @param IncidentReport $report
+     * Returns the name of a Unit, linked to the respective info page if URL has been set.
+     *
+     * @param WP_Term $unit
+     *
+     * @return string
+     */
+    private function getUnitNameWithLink(WP_Term $unit): string
+    {
+        $name = $unit->name;
+
+        $infoUrl = Unit::getInfoUrl($unit);
+        if (empty($infoUrl)) {
+            return esc_html($name);
+        }
+
+        return sprintf(
+            '<a href="%s" title="Mehr Informationen zu %s">%s</a>',
+            esc_url($infoUrl),
+            esc_attr($name),
+            esc_html($name)
+        );
+    }
+
+    /**
+     * @param WP_Term[] $vehicles
      * @param bool $makeLinks Fahrzeugname als Link zur Fahrzeugseite angeben, wenn diese eingetragen wurde
      * @param bool $showArchiveLinks Generiere zusätzlichen Link zur Archivseite des Fahrzeugs
      *
      * @return string
      */
-    public function getVehicles($report, $makeLinks, $showArchiveLinks)
+    public function getVehicleString(array $vehicles, bool $makeLinks, bool $showArchiveLinks): string
     {
-        if (empty($report)) {
-            return '';
-        }
-
-        $vehicles = $report->getVehicles();
-
         if (empty($vehicles)) {
             return '';
         }
@@ -405,11 +416,38 @@ class Formatter
         return join(", ", $names);
     }
 
+    public function getVehiclesByUnitString(array $vehiclesByUnitId): string
+    {
+        if (empty($vehiclesByUnitId)) {
+            return '';
+        }
+
+        $string = '<ul>';
+        foreach ($vehiclesByUnitId as $unitId => $vehicles) {
+            if ($unitId === -1) {
+                $string .= sprintf(
+                    '<li>%s</li>',
+                    $this->getVehicleString($vehicles, true, true)
+                );
+                continue;
+            }
+
+            $unit = get_term($unitId, Unit::getSlug());
+            $string .= sprintf(
+                '<li><strong>%s:</strong> %s</li>',
+                $this->getUnitNameWithLink($unit),
+                $this->getVehicleString($vehicles, true, true)
+            );
+        }
+        $string .= '</ul>';
+        return $string;
+    }
+
     /**
      * @param WP_Term $vehicle
      * @return string A link to the page associated with the vehicle (if any), otherwise the name without a link
      */
-    private function addVehicleLink($vehicle)
+    private function addVehicleLink(WP_Term $vehicle): string
     {
         $url = $this->getUrlForVehicle($vehicle);
         if (empty($url)) {
@@ -429,7 +467,7 @@ class Formatter
      *
      * @return string
      */
-    private function getUrlForVehicle(WP_Term $vehicle)
+    private function getUrlForVehicle(WP_Term $vehicle): string
     {
         // The external URL takes precedence over an internal page
         $extUrl = get_term_meta($vehicle->term_id, 'vehicle_exturl', true);
@@ -459,7 +497,7 @@ class Formatter
      *
      * @return string
      */
-    public function getAdditionalForces($report, $makeLinks, $showArchiveLinks)
+    public function getAdditionalForces(IncidentReport $report, bool $makeLinks, bool $showArchiveLinks): string
     {
         if (empty($report)) {
             return '';
@@ -490,9 +528,10 @@ class Formatter
 
     /**
      * @param WP_Term $additionalForce
+     *
      * @return string
      */
-    private function getAdditionalForceLink($additionalForce)
+    private function getAdditionalForceLink(WP_Term $additionalForce): string
     {
         $url = get_term_meta($additionalForce->term_id, 'url', true);
         if (empty($url)) {
@@ -511,9 +550,10 @@ class Formatter
 
     /**
      * @param WP_Term $term
+     *
      * @return string
      */
-    private function getFilterLink(WP_Term $term)
+    private function getFilterLink(WP_Term $term): string
     {
         return sprintf(
             '<a href="%s" class="fa fa-filter" style="text-decoration: none;" title="%s"></a>',
@@ -530,7 +570,7 @@ class Formatter
      *
      * @return string
      */
-    public static function getDurationString($minutes, $abbreviated = false)
+    public static function getDurationString(int $minutes, $abbreviated = false): string
     {
         if (!is_numeric($minutes) || $minutes < 0) {
             return '';
@@ -554,9 +594,10 @@ class Formatter
 
     /**
      * @param string $tag
+     *
      * @return string
      */
-    public function getLabelForTag($tag)
+    public function getLabelForTag(string $tag): string
     {
         if (!array_key_exists($tag, $this->availableTags)) {
             return '';

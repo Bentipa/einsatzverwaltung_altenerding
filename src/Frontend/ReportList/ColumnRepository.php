@@ -29,20 +29,20 @@ class ColumnRepository
      */
     private function __construct()
     {
-        $this->addColumn(new Column('number', 'Nummer', '', true));
-        $this->addColumn(new Column('date', 'Datum', '', true));
-        $this->addColumn(new Column('time', 'Zeit', '', true));
-        $this->addColumn(new Column('datetime', 'Datum', 'Datum + Zeit', true));
+        $this->addColumn(new Column('number', __('Number', 'einsatzverwaltung'), __('Incident number', 'einsatzverwaltung'), true));
+        $this->addColumn(new Column('date', __('Date', 'einsatzverwaltung'), '', true));
+        $this->addColumn(new Column('time', __('Time', 'einsatzverwaltung'), '', true));
+        $this->addColumn(new Column('datetime', __('Date', 'einsatzverwaltung'), __('Date and time', 'einsatzverwaltung'), true));
         $this->addColumn(new Column('title', 'Einsatzmeldung'));
         $this->addColumn(new Column('incidentCommander', 'Einsatzleiter'));
-        $this->addColumn(new Column('location', 'Einsatzort'));
+        $this->addColumn(new Column('location', __('Location', 'einsatzverwaltung')));
         $this->addColumn(new Column('workforce', 'Mannschaftsst&auml;rke'));
-        $this->addColumn(new Column('duration', 'Dauer', '', true));
-        $this->addColumn(new Column('vehicles', 'Fahrzeuge'));
+        $this->addColumn(new Column('duration', __('Duration', 'einsatzverwaltung'), '', true));
+        $this->addColumn(new Column('vehicles', __('Vehicles', 'einsatzverwaltung')));
         $this->addColumn(new Column('alarmType', 'Alarmierungsart'));
         $this->addColumn(new Column('additionalForces', 'Weitere Kr&auml;fte'));
         $this->addColumn(new Column('units', __('Units', 'einsatzverwaltung')));
-        $this->addColumn(new Column('incidentType', 'Einsatzart'));
+        $this->addColumn(new Column('incidentType', __('Incident Category', 'einsatzverwaltung')));
         $this->addColumn(new Column('seqNum', 'Lfd.', 'Laufende Nummer'));
         $this->addColumn(new Column('annotationImages', '', 'Vermerk &quot;Bilder im Bericht&quot;'));
         $this->addColumn(new Column('annotationSpecial', '', 'Vermerk &quot;Besonderer Einsatz&quot;'));
@@ -59,7 +59,7 @@ class ColumnRepository
     /**
      * @return Column[]
      */
-    public function getAvailableColumns()
+    public function getAvailableColumns(): array
     {
         return $this->columns;
     }
@@ -69,7 +69,7 @@ class ColumnRepository
      *
      * @return Column|null
      */
-    public function getColumn($identifier)
+    public function getColumn($identifier): ?Column
     {
         if (!$this->hasColumn($identifier)) {
             return null;
@@ -83,7 +83,7 @@ class ColumnRepository
      *
      * @return Column[]
      */
-    public function getColumnsByIdentifier($identifiers)
+    public function getColumnsByIdentifier($identifiers): array
     {
         $columns = array();
         foreach ($identifiers as $identifier) {
@@ -97,7 +97,7 @@ class ColumnRepository
     /**
      * @return Column[]
      */
-    public function getDefaultColumns()
+    public function getDefaultColumns(): array
     {
         return $this->getColumnsByIdentifier(explode(',', self::DEFAULT_COLUMNS));
     }
@@ -107,7 +107,7 @@ class ColumnRepository
      *
      * @return string
      */
-    public function getIdentifiers($columns)
+    public function getIdentifiers($columns): string
     {
         $columnIds = array_map(function (Column $column) {
             return $column->getIdentifier();
@@ -119,7 +119,7 @@ class ColumnRepository
     /**
      * @return ColumnRepository
      */
-    public static function getInstance()
+    public static function getInstance(): ColumnRepository
     {
         if (empty(self::$instance)) {
             self::$instance = new self();
@@ -133,7 +133,7 @@ class ColumnRepository
      *
      * @return bool
      */
-    public function hasColumn($identifier)
+    public function hasColumn($identifier): bool
     {
         return array_key_exists($identifier, $this->columns);
     }
@@ -146,7 +146,7 @@ class ColumnRepository
      * @return string Der Eingabestring ohne ungültige Spalten-Ids, bei Problemen werden die Standardspalten
      * zurückgegeben
      */
-    public static function sanitizeColumns($input)
+    public static function sanitizeColumns($input): string
     {
         if (empty($input)) {
             return self::DEFAULT_COLUMNS;
@@ -166,7 +166,7 @@ class ColumnRepository
      *
      * @return string[]
      */
-    public static function sanitizeColumnsArray($inputArray)
+    public static function sanitizeColumnsArray($inputArray): array
     {
         $validColumnIds = self::sanitizeColumnsArrayNoDefault($inputArray);
 
@@ -184,7 +184,7 @@ class ColumnRepository
      *
      * @return string[]
      */
-    public static function sanitizeColumnsArrayNoDefault($inputArray)
+    public static function sanitizeColumnsArrayNoDefault($inputArray): array
     {
         $columnRepository = self::getInstance();
 

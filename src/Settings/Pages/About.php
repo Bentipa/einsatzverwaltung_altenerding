@@ -13,17 +13,15 @@ class About extends SubPage
 {
     public function __construct()
     {
-        parent::__construct('about', '&Uuml;ber');
+        parent::__construct('about', __('About', 'einsatzverwaltung'));
     }
 
     public function addSettingsFields()
     {
-        return;
     }
 
     public function addSettingsSections()
     {
-        return;
     }
 
     /**
@@ -56,7 +54,6 @@ class About extends SubPage
         <ul>
             <li>Twitter: <a href="https://twitter.com/einsatzvw" title="Einsatzverwaltung auf Twitter">@einsatzvw</a></li>
             <li>Mastodon: <a href="https://chaos.social/@einsatzverwaltung" title="Einsatzverwaltung im Fediverse">@einsatzverwaltung</a></li>
-            <li>Facebook: <a href="https://www.facebook.com/einsatzverwaltung/" title="Einsatzverwaltung auf Facebook">Einsatzverwaltung</a></li>
         </ul>
         <p>Du kannst die Neuigkeiten auch mit deinem Feedreader abonnieren: <a href="https://einsatzverwaltung.abrain.de/feed/">RSS</a> / <a href="https://einsatzverwaltung.abrain.de/feed/atom/">Atom</a></p>
         <?php
@@ -65,13 +62,12 @@ class About extends SubPage
     /**
      * @inheritDoc
      */
-    public function hasForm()
+    public function hasForm(): bool
     {
         return false;
     }
 
     public function registerSettings()
     {
-        return;
     }
 }

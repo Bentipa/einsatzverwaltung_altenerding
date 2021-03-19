@@ -3,7 +3,7 @@
 Plugin Name: Einsatzverwaltung Altenerding
 Plugin URI: https://einsatzverwaltung.abrain.de
 Description: Public incident reports for fire brigades and other rescue services. Modified for FF Altenerding
-Version: 1.7.3.AE
+Version: 1.8.0.AE
 Author: Andreas Brain, Benjamin Pabst
 Author URI: https://www.abrain.de
 License: GPLv2
